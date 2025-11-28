@@ -1,5 +1,6 @@
 {
   "name": "uplus-wss",
+  "homepage": "https://roy-tan.github.io/uplus-wss",
   "version": "2.0.0",
   "type": "module",
   "scripts": {
@@ -11,7 +12,9 @@
     "test:e2e:ci": "start-server-and-test preview http://localhost:5050 'cypress run'",
     "test:unit": "vitest run --coverage --environment jsdom",
     "docker-build": "npx docker build --tag richardmarsot/uplus-wss  -f ./Dockerfile .",
-    "docker-push": "npx docker push richardmarsot/uplus-wss"
+    "docker-push": "npx docker push richardmarsot/uplus-wss",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d docs"
   },
   "dependencies": {
     "crypto-js": "^4.2.0",
