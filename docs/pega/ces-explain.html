@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>How Customer Engagement Studio works</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;600;700&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root { box-sizing:border-box; padding-top:env(safe-area-inset-top, 0px); padding-bottom:env(safe-area-inset-bottom, 0px);
+  --bg:#FFFFFF; --surface:#ECF0F9; --ink:#001F5F; --muted:#4A4F5A; --accent:#0E7E84; --accent-ink:#FFFFFF; --line:#D7E2F2; --track:#D7E2F2;
+  --serif:'Lora', Georgia, 'Times New Roman', serif; --sansf:'Open Sans', 'Segoe UI', Arial, sans-serif; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { color-scheme:dark;
+  --bg:#0A1430; --surface:#13224A; --ink:#ECF0F9; --muted:#AEB8CE; --accent:#4FBFC4; --accent-ink:#04222A; --line:#24386A; --track:#24386A; } }
+:root[data-theme="dark"] { color-scheme:dark; --bg:#0A1430; --surface:#13224A; --ink:#ECF0F9; --muted:#AEB8CE; --accent:#4FBFC4; --accent-ink:#04222A; --line:#24386A; --track:#24386A; }
+html { scroll-padding-top:env(safe-area-inset-top, 0px); }
+*, *::before, *::after { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--ink); font-family:var(--sansf); line-height:1.5; }
+.wrap { max-width:1760px; margin:0 auto; padding:28px clamp(16px, 3vw, 40px) 48px; }
+header.top { display:flex; align-items:baseline; justify-content:space-between; gap:24px; flex-wrap:wrap; margin:0 auto 16px; width:min(100%, calc((100svh - 190px) * 16 / 9)); min-width:min(100%, 640px); }
+header.top h1 { font-family:var(--serif); font-weight:700; font-size:clamp(24px, 2.6vw, 34px); line-height:1.15; margin:0; }
+header.top p { margin:0; color:var(--muted); font-size:16px; }
+.hero { width:min(100%, calc((100svh - 190px) * 16 / 9)); min-width:min(100%, 640px); margin:0 auto; }
+.screen { position:relative; width:100%; aspect-ratio:16 / 9; border-radius:16px; overflow:hidden; background:#ECF0F9; border:1px solid var(--line); }
+#stage { position:absolute; left:0; top:0; width:1920px; height:1080px; transform-origin:0 0; overflow:hidden;
+  --display:'Lora', Georgia, serif; --sans:'Open Sans', Arial, sans-serif; }
+#stage .scene { position:absolute; inset:0; display:none; }
+#stage .scene.on { display:block; }
+.controls { display:flex; align-items:center; gap:10px; margin-top:16px; flex-wrap:wrap; }
+.btn { font:inherit; font-size:15px; font-weight:600; color:var(--ink); background:var(--surface); border:1px solid var(--line); border-radius:999px; padding:9px 18px; cursor:pointer; display:inline-flex; align-items:center; gap:8px; }
+.btn:hover { border-color:var(--accent); }
+.btn:focus-visible, .seg:focus-visible { outline:3px solid var(--accent); outline-offset:2px; }
+.btn svg { width:16px; height:16px; flex:none; }
+.btn.primary { background:var(--accent); color:var(--accent-ink); border-color:var(--accent); }
+.btn[disabled] { opacity:.45; cursor:default; }
+.time { margin-left:auto; color:var(--muted); font-size:14px; font-variant-numeric:tabular-nums; }
+.strip { display:flex; gap:4px; margin-top:14px; }
+.seg { flex-grow:var(--d); flex-basis:0; min-width:0; height:34px; border:0; padding:0; background:none; cursor:pointer; position:relative; display:flex; flex-direction:column; justify-content:center; gap:5px; }
+.seg .bar { display:block; height:6px; border-radius:3px; background:var(--track); overflow:hidden; }
+.seg .fill { display:block; height:100%; width:0; background:var(--accent); }
+.seg .n { font-size:12px; color:var(--muted); text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.seg.cur .n { color:var(--ink); font-weight:700; }
+aside.panel { background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:26px 30px; margin-top:22px; display:grid; grid-template-columns:minmax(0, 1.1fr) minmax(0, 1fr); gap:12px 40px; }
+@media (max-width: 760px) { aside.panel { grid-template-columns:minmax(0, 1fr); } }
+.panel .info { min-width:0; }
+.panel .count { margin:0 0 6px; color:var(--accent); font-weight:700; font-size:14px; }
+.panel h2 { font-family:var(--serif); font-size:28px; line-height:1.2; margin:0 0 14px; }
+.panel .summary { margin:0; font-size:16px; line-height:1.6; }
+.panel dl { margin:0; display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:14px 24px; align-content:start; }
+.panel dt { font-weight:700; font-size:15px; }
+.panel dd { margin:2px 0 0; color:var(--muted); font-size:15px; }
+.panel .hint { margin:20px 0 0; font-size:14px; color:var(--muted); min-height:1.5em; }
+.panel .hint.ready { color:var(--ink); }
+.chapters { margin:22px 0 0; padding:0; list-style:none; display:grid; gap:2px; }
+.chapters button { font:inherit; font-size:14px; width:100%; text-align:left; background:none; border:0; border-radius:8px; padding:7px 10px; color:var(--muted); cursor:pointer; display:flex; gap:10px; }
+.chapters button span:first-child { font-variant-numeric:tabular-nums; min-width:1.4em; }
+.chapters button:hover { background:color-mix(in srgb, var(--accent) 10%, transparent); }
+.chapters button[aria-current="true"] { color:var(--ink); font-weight:700; background:color-mix(in srgb, var(--accent) 14%, transparent); }
+.chapters button:focus-visible { outline:3px solid var(--accent); outline-offset:1px; }
+.chapters[hidden] { display:none; }
+.keys { margin-top:12px; font-size:13px; color:var(--muted); }
+#stage { --ground:#ECF0F9; --main:#0E7E84; --second:#001F5F; --accent:#5F67B9; color:var(--second); font-family:var(--sans, system-ui, sans-serif) }
+.ground { position:absolute; inset:0; background:var(--ground) }
+.words { position:absolute; margin:0; display:flex; flex-direction:column; gap:20px } .words > * { margin:0 }
+.line { font-family:var(--display, var(--sans, system-ui, sans-serif)); font-size:72px; line-height:1.08; font-weight:700 } .sub { font-size:34px; line-height:1.3; color:color-mix(in srgb, var(--second) 72%, var(--ground)) }
+.tag { font-size:24px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--main) }
+.art { position:absolute; inset:0; width:100%; height:100%; overflow:visible }
+.ink { fill:none; stroke:currentColor; stroke-width:4; stroke-linecap:round; stroke-linejoin:round }
+.ly-bld { position:absolute; left:960px; top:120px; width:820px; height:800px }
+.ly-room { position:absolute; left:0; width:820px; box-sizing:border-box; border-radius:16px; border:3px solid var(--second); overflow:hidden }
+.ly-ces { top:40px; height:260px; background:var(--second); color:var(--ground) }
+.ly-ops { top:320px; height:200px; background:color-mix(in srgb, var(--main) 16%, var(--ground)); border-color:var(--main); color:var(--second) }
+.ly-cdh { top:540px; height:240px; background:color-mix(in srgb, var(--accent) 12%, var(--ground)); border-color:var(--accent); color:var(--second) }
+.ly-roof { position:absolute; left:-20px; top:0; width:860px; height:22px; border-radius:8px; background:var(--second) }
+.ly-floor { position:absolute; left:-60px; top:790px; width:940px; height:4px; border-radius:2px; background:color-mix(in srgb, var(--second) 40%, var(--ground)) }
+.ly-label { position:absolute; left:28px; top:20px; display:flex; flex-direction:column; gap:4px; margin:0 } .ly-label > * { margin:0 }
+.ly-kicker { font-size:22px; font-weight:700; letter-spacing:.14em; text-transform:uppercase }
+.ly-ces .ly-kicker { color:color-mix(in srgb, var(--main) 55%, var(--ground)) } .ly-ops .ly-kicker { color:var(--main) } .ly-cdh .ly-kicker { color:var(--accent) }
+.ly-name { font-family:var(--display, var(--sans, system-ui, sans-serif)); font-size:34px; line-height:1.15; font-weight:700 }
+.card { position:absolute; box-sizing:border-box; width:120px; height:150px; border-radius:10px; background:color-mix(in srgb, var(--ground) 40%, #FFFFFF); border:3px solid var(--second); box-shadow:0 10px 20px rgba(0,0,0,.18) }
+.card i { display:block; height:8px; margin:16px 14px 0; border-radius:4px; background:color-mix(in srgb, var(--second) 30%, var(--ground)) }
+.pill { position:absolute; margin:0; padding:12px 26px; border-radius:999px; font-size:28px; font-weight:700; white-space:nowrap; background:color-mix(in srgb, var(--ground) 40%, #FFFFFF); border:3px solid var(--main); color:var(--second) }
+.tile { position:absolute; box-sizing:border-box; border-radius:18px; background:color-mix(in srgb, var(--second) 82%, var(--ground)); border:2px solid color-mix(in srgb, var(--ground) 22%, var(--second)); display:flex; flex-direction:column; gap:10px; color:var(--ground) }
+.tile h3 { margin:0; font-family:var(--display, var(--sans, system-ui, sans-serif)); font-size:38px; line-height:1.1; font-weight:700 }
+.tile p { margin:0; font-size:27px; line-height:1.3; color:color-mix(in srgb, var(--ground) 78%, var(--second)) }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>How Customer Engagement Studio works</h1>
+    <p>Eleven short chapters. Pause, go back or replay anything.</p>
+  </header>
+  <div class="hero">
+    <section aria-label="Animation">
+      <div class="screen" id="screen"><div id="stage"></div></div>
+      <div class="controls">
+        <button class="btn" id="prev" aria-label="Previous chapter"><svg viewBox="0 0 16 16"><path d="M11 2 L4 8 L11 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Previous</button>
+        <button class="btn" id="replay"><svg viewBox="0 0 16 16"><path d="M3 8 A5 5 0 1 0 5 4 M5 1 V4 H2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Replay chapter</button>
+        <button class="btn" id="play"><svg viewBox="0 0 16 16" id="playIcon"></svg><span id="playLabel">Pause</span></button>
+        <button class="btn" id="next">Next chapter<svg viewBox="0 0 16 16"><path d="M5 2 L12 8 L5 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <span class="time" id="time">0:00 / 1:14</span>
+      </div>
+      <div class="strip" id="strip" role="group" aria-label="Chapters timeline"></div>
+      <p class="keys">Keyboard: Space plays or pauses, ← and → move between chapters, R replays the chapter.</p>
+    </section>
+    <aside class="panel" aria-live="polite">
+      <div class="info">
+        <p class="count" id="count">Chapter 1 of 8</p>
+        <h2 id="ctitle"></h2>
+        <p class="summary" id="csum"></p>
+        <p class="hint" id="hint"></p>
+      </div>
+      <dl id="cpoints"></dl>
+      <ol class="chapters" id="clist" hidden></ol>
+    </aside>
+  </div>
+</div>
+<script>
+const seg = (t, a, b) => Math.min(1, Math.max(0, (t - a) / (b - a)));
+const lerp = (a, b, p) => a + (b - a) * p;
+const eo = (p) => 1 - Math.pow(1 - p, 3);
+const eio = (p) => p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+const eob = (p, s) => { s = s == null ? 1.70158 : s; const c3 = s + 1; return 1 + c3 * Math.pow(p - 1, 3) + s * Math.pow(p - 1, 2); };
+const TextFx = {
+  fadeFromRight(el, t, start, opts) {
+    if (!el._w) {
+      const words = el.textContent.trim().split(/\s+/);
+      el.textContent = '';
+      el._w = words.map((w, i) => {
+        const s = document.createElement('span');
+        s.textContent = w; s.style.display = 'inline-block';
+        el.appendChild(s);
+        if (i < words.length - 1) el.appendChild(document.createTextNode(' '));
+        return s;
+      });
+    }
+    const st = (opts && opts.stagger != null) ? opts.stagger : 0.06;
+    el._w.forEach((s, i) => {
+      const p = eo(seg(t, start + i * st, start + i * st + 0.6));
+      s.style.opacity = p;
+      s.style.transform = 'translateX(' + ((1 - p) * 40) + 'px)';
+    });
+  },
+};
+const STAGE = document.getElementById('stage');
+const REG = {}, BOX = {};
+function mkKit(id) {
+  const box = document.createElement('div');
+  box.className = 'scene';
+  STAGE.appendChild(box);
+  BOX[id] = box;
+  return { seg, lerp, eo, eio, eob, TextFx, stage: box,
+    h(html) { const tp = document.createElement('template'); tp.innerHTML = html.trim(); return tp.content.firstElementChild; },
+    scene(name, obj) { REG[name] = obj; } };
+}
+window.LY = {
+  ROAD: 900, DECK: 744, PSC: 0.45,
+  building() {
+    return '<div class="ly-bld"><div class="ly-roof"></div>' +
+      '<div class="ly-room ly-ces"><div class="ly-label"><p class="ly-kicker">Where you ask</p><p class="ly-name">Customer Engagement Studio</p></div>' +
+      '<svg class="art" viewBox="0 0 820 260"><g class="ink"><path d="M380 130 Q380 112 398 112 H520 Q538 112 538 130 V176 Q538 194 520 194 H430 L404 214 V194 H398 Q380 194 380 176 Z"/><path d="M410 145 H508 M410 165 H476"/><circle cx="612" cy="160" r="24"/><circle cx="690" cy="160" r="24"/><circle cx="768" cy="160" r="24"/><path d="M538 160 H588 M636 160 H666 M714 160 H744"/></g></svg></div>' +
+      '<div class="ly-room ly-ops"><div class="ly-label"><p class="ly-kicker">Where changes are governed</p><p class="ly-name">1:1 Operations Manager</p></div>' +
+      '<svg class="art" viewBox="0 0 820 200"><g class="ink"><rect x="600" y="70" width="180" height="110" rx="10"/><path d="M620 98 L630 108 L646 90 M662 99 H760 M620 128 L630 138 L646 120 M662 129 H760 M622 156 H646 M662 159 H730"/></g></svg></div>' +
+      '<div class="ly-room ly-cdh"><div class="ly-label"><p class="ly-kicker">Where decisions run</p><p class="ly-name">Customer Decision Hub</p></div>' +
+      '<svg class="art" viewBox="0 0 820 240"><g class="ink"><circle cx="520" cy="150" r="46"/><circle cx="670" cy="150" r="46"/><path d="M566 150 H624"/></g><g class="ink"><path class="ly-spoke1" d="M520 112 V188 M482 150 H558"/><path class="ly-spoke2" d="M670 112 V188 M632 150 H708"/></g></svg></div>' +
+      '<div class="ly-floor"></div></div>';
+  },
+  spin(stage, t) {
+    const a = (t * 90) % 360;
+    const s1 = stage.querySelector('.ly-spoke1'), s2 = stage.querySelector('.ly-spoke2');
+    if (s1) s1.setAttribute('transform', 'rotate(' + a + ' 520 150)');
+    if (s2) s2.setAttribute('transform', 'rotate(' + -a + ' 670 150)');
+  },
+  ok() {
+    return '<div class="ly-ok" style="position:absolute;right:-22px;top:-22px;width:52px;height:52px;border-radius:26px;background:var(--main)"><svg viewBox="0 0 52 52" style="position:absolute;inset:0"><path d="M15 27 L23 35 L38 18" style="fill:none;stroke:var(--ground);stroke-width:6;stroke-linecap:round;stroke-linejoin:round"/></svg></div>';
+  },
+  paper(i, cls, mine) {
+    const w = mine ? 86 : 40 + ((i * 17) % 40);
+    return '<div class="card ' + cls + '" style="left:0;top:0;transform-origin:center' + (mine ? ';border-color:var(--main);box-shadow:0 0 0 6px color-mix(in srgb, var(--main) 35%, transparent), 0 10px 20px rgba(0,0,0,.18)' : '') + '"><i></i><i style="width:' + w + 'px"></i><i></i><i style="width:' + (mine ? 50 : w - 20) + 'px"></i>' + window.LY.ok() + '</div>';
+  },
+  vehicle(label, cls) {
+    const wheel = (x) => '<div style="position:absolute;left:' + x + 'px;top:84px;width:46px;height:46px;box-sizing:border-box;border-radius:23px;background:var(--second);border:6px solid color-mix(in srgb, var(--ground) 55%, var(--second))"></div>';
+    return '<div class="' + cls + '" style="position:absolute;left:0;top:0;width:300px;height:130px"><div style="position:absolute;left:0;top:0;width:300px;height:100px;box-sizing:border-box;border-radius:18px;background:var(--second);border:3px solid color-mix(in srgb, var(--ground) 55%, var(--second));display:flex;align-items:center;justify-content:center"><p style="margin:0;font-size:28px;font-weight:700;color:var(--ground)">' + label + '</p></div>' + wheel(44) + wheel(210) + '</div>';
+  },
+};
+(function(kit){
+const { seg, eo, eob, lerp, TextFx } = kit;
+kit.scene('layers', {
+  init(kit) {
+    this.root = kit.h('<div class="ground"><div class="layers-cam" style="position:absolute;inset:0;transform-origin:1370px 520px">' + window.LY.building() + '</div>' +
+      '<div class="words" style="left:120px;top:270px;width:760px"><p class="tag layers-tag">The architecture</p>' +
+      '<h1 class="line layers-line">How Customer Engagement Studio works</h1>' +
+      '<p class="sub layers-sub">Three layers, each with one job.</p></div></div>');
+    kit.stage.append(this.root);
+    const q = (s) => this.root.querySelector(s);
+    this.cam = q('.layers-cam').style;
+    this.tag = q('.layers-tag').style;
+    this.sub = q('.layers-sub').style;
+    this.line = q('.layers-line');
+    this.parts = [['.ly-roof', -0.5], ['.ly-ces', -0.5], ['.ly-ops', 1.1], ['.ly-cdh', 2.4], ['.ly-floor', 2.4]].map(([s, t0]) => ({ st: q(s).style, t0 }));
+  },
+  render(t) {
+    this.cam.transform = 'scale(' + lerp(1, 1.04, seg(t, 0, 7)) + ')';
+    this.tag.opacity = eo(seg(t, -0.7, -0.2));
+    TextFx.fadeFromRight(this.line, t, -0.7, { stagger: 0.09 });
+    const s = eo(seg(t, 3.6, 4.2));
+    this.sub.opacity = s;
+    this.sub.transform = 'translateX(' + lerp(26, 0, s) + 'px)';
+    for (const p of this.parts) {
+      p.st.opacity = eo(seg(t, p.t0, p.t0 + 0.3));
+      p.st.transform = 'translateY(' + lerp(60, 0, eob(seg(t, p.t0, p.t0 + 0.8), 1.6)) + 'px)';
+    }
+    window.LY.spin(this.root, t);
+  },
+});
+})(mkKit('layers'));
+(function(kit){
+const { seg, eo, eio, eob, lerp, TextFx } = kit;
+const AG = [
+  ['Marketing Briefs', 'Turns a brief into intent', '<path d="M14 50 L18 36 L44 10 L54 20 L28 46 Z M38 16 L48 26"/>'],
+  ['Engagement Policy', 'Plain English into policies', '<path d="M32 10 V54 M18 54 H46 M12 22 H52 M12 22 L4 38 H20 Z M52 22 L44 38 H60 Z"/>'],
+  ['Creative', 'Designs the treatments', '<path d="M32 8 A16 16 0 0 1 42 36 V44 H22 V36 A16 16 0 0 1 32 8 Z M24 52 H40"/>'],
+];
+kit.scene('agents', {
+  init(kit) {
+    let cards = '';
+    AG.forEach(([n, d, ic], i) => {
+      cards += '<div class="tile agents-card" style="left:' + (120 + i * 572) + 'px;top:560px;width:536px;padding:40px">' +
+        '<svg viewBox="0 0 64 64" style="width:64px;height:64px;color:color-mix(in srgb, var(--main) 55%, var(--ground))"><g class="ink">' + ic + '</g></svg>' +
+        '<h3>' + n + '</h3><p>' + d + '</p></div>';
+    });
+    this.root = kit.h('<div class="ground"><div class="agents-cam" style="position:absolute;inset:0;transform-origin:0 0">' + window.LY.building() + '</div>' +
+      '<div class="agents-in" style="position:absolute;inset:0;background:var(--second);color:var(--ground)">' +
+      '<div class="words" style="left:120px;top:150px;width:1500px"><p class="tag agents-tag" style="color:color-mix(in srgb, var(--main) 55%, var(--ground))">Inside Customer Engagement Studio</p>' +
+      '<h2 class="line agents-line">Helping agents</h2>' +
+      '<p class="sub agents-sub" style="color:color-mix(in srgb, var(--ground) 75%, var(--second))">You describe what you want. Each agent drafts its part.</p></div>' + cards + '</div></div>');
+    kit.stage.append(this.root);
+    const q = (s) => this.root.querySelector(s);
+    this.cam = q('.agents-cam').style;
+    this.inside = q('.agents-in').style;
+    this.tag = q('.agents-tag').style;
+    this.sub = q('.agents-sub').style;
+    this.line = q('.agents-line');
+    this.cards = [...this.root.querySelectorAll('.agents-card')].map((e) => e.style);
+  },
+  render(t) {
+    const p = eio(seg(t, 0.2, 1.8));
+    const z = Math.exp(lerp(Math.log(1.04), Math.log(2.4), p));
+    this.cam.transform = 'translate(' + lerp(1370 * -0.04, 960 - 1370 * 2.4, p) + 'px,' + lerp(520 * -0.04, 540 - 290 * 2.4, p) + 'px) scale(' + z + ')';
+    const f = eo(seg(t, 1.5, 2.0));
+    this.inside.opacity = f;
+    this.inside.transform = 'scale(' + lerp(1.06, 1, f) * lerp(1, 1.015, seg(t, 2.0, 7)) + ')';
+    this.tag.opacity = eo(seg(t, 2.0, 2.4));
+    TextFx.fadeFromRight(this.line, t, 2.1);
+    const s = eo(seg(t, 2.9, 3.4));
+    this.sub.opacity = s;
+    this.sub.transform = 'translateX(' + lerp(26, 0, s) + 'px)';
+    this.cards.forEach((st, i) => {
+      const t0 = 3.6 + i * 0.6;
+      st.opacity = eo(seg(t, t0, t0 + 0.3));
+      st.transform = 'translateY(' + lerp(50, 0, eob(seg(t, t0, t0 + 0.75), 1.6)) + 'px)';
+    });
+  },
+});
+})(mkKit('agents'));
+(function(kit){
+const { seg, eo, eio, eob, lerp, TextFx } = kit;
+const TO = [
+  ['Application Exploration', 'Reads how the app is set up'],
+  ['Runtime Analytics', 'History and action performance'],
+  ['Guidebooks', 'Best practices and how-tos'],
+  ['Advisories', 'Health gaps found for you'],
+];
+const ND = [[1470, 470], [1810, 470], [1640, 380]];
+const HB = [1640, 640];
+kit.scene('tools', {
+  init(kit) {
+    let tiles = '';
+    TO.forEach(([n, d], i) => {
+      tiles += '<div class="tile tools-tile" style="left:' + (120 + (i % 2) * 628) + 'px;top:' + (520 + Math.floor(i / 2) * 180) + 'px;width:600px;height:152px;justify-content:center;padding:0 32px"><h3>' + n + '</h3><p>' + d + '</p></div>';
+    });
+    let links = '', nodes = '';
+    ND.forEach(([x, y]) => {
+      links += '<path class="tools-link" d="M' + x + ' ' + y + ' L' + HB[0] + ' ' + HB[1] + '" pathLength="1" style="fill:none;stroke:color-mix(in srgb, var(--main) 60%, var(--ground));stroke-width:4;stroke-dasharray:1 1"/>';
+      nodes += '<g class="tools-node"><rect x="' + (x - 34) + '" y="' + (y - 34) + '" width="68" height="68" rx="16" style="fill:color-mix(in srgb, var(--accent) 70%, var(--second))"/><circle cx="' + (x - 12) + '" cy="' + (y - 4) + '" r="6" style="fill:var(--ground)"/><circle cx="' + (x + 12) + '" cy="' + (y - 4) + '" r="6" style="fill:var(--ground)"/><path d="M' + (x - 12) + ' ' + (y + 14) + ' H' + (x + 12) + '" style="stroke:var(--ground);stroke-width:4;stroke-linecap:round"/></g>';
+    });
+    this.root = kit.h('<div class="ground" style="background:var(--second);color:var(--ground)"><div class="tools-all" style="position:absolute;inset:0;transform-origin:960px 540px">' +
+      '<div class="words" style="left:120px;top:150px;width:1300px"><p class="tag tools-tag" style="color:color-mix(in srgb, var(--main) 55%, var(--ground))">Inside Customer Engagement Studio</p>' +
+      '<h2 class="line tools-line">Agent tools</h2>' +
+      '<p class="sub tools-sub" style="color:color-mix(in srgb, var(--ground) 75%, var(--second))">What the agents use to understand your setup.</p></div>' + tiles +
+      '<svg class="art" viewBox="0 0 1920 1080">' + links +
+      '<path class="tools-plug" d="M' + (HB[0] - 70) + ' ' + HB[1] + ' H1370" pathLength="1" style="fill:none;stroke:var(--main);stroke-width:5;stroke-linecap:round;stroke-dasharray:1 1"/>' + nodes +
+      '<g class="tools-hub"><circle cx="' + HB[0] + '" cy="' + HB[1] + '" r="70" style="fill:var(--second);stroke:var(--main);stroke-width:5;stroke-dasharray:12 9"/></g>' +
+      '<text class="tools-mcp" x="' + HB[0] + '" y="' + (HB[1] + 12) + '" text-anchor="middle" style="fill:var(--ground);font-size:34px;font-weight:700">MCP</text></svg>' +
+      '<div class="words tools-ext" style="left:1440px;top:740px;width:420px;gap:6px"><p style="font-family:var(--display, var(--sans, system-ui, sans-serif));font-size:36px;font-weight:700;line-height:1.1">External agents</p>' +
+      '<p style="font-size:26px;line-height:1.3;color:color-mix(in srgb, var(--ground) 75%, var(--second))">Connect to the Studio through MCP</p></div>' + '</div></div>');
+    kit.stage.append(this.root);
+    const q = (s) => this.root.querySelector(s);
+    this.all = q('.tools-all').style;
+    this.tag = q('.tools-tag').style;
+    this.sub = q('.tools-sub').style;
+    this.line = q('.tools-line');
+    this.tiles = [...this.root.querySelectorAll('.tools-tile')].map((e) => e.style);
+    this.links = [...this.root.querySelectorAll('.tools-link')];
+    this.nodes = [...this.root.querySelectorAll('.tools-node')];
+    this.hub = q('.tools-hub');
+    this.plug = q('.tools-plug');
+    this.ext = q('.tools-ext').style;
+    this.mcp = q('.tools-mcp');
+    this.adv = this.root.querySelectorAll('.tools-tile')[3].style;
+  },
+  render(t) {
+    this.all.transform = 'scale(' + lerp(1, 1.02, seg(t, 0, 8)) + ')';
+    this.tag.opacity = eo(seg(t, -0.2, 0.2));
+    TextFx.fadeFromRight(this.line, t, 0.1);
+    const s = eo(seg(t, 0.8, 1.3));
+    this.sub.opacity = s;
+    this.sub.transform = 'translateX(' + lerp(26, 0, s) + 'px)';
+    this.tiles.forEach((st, i) => {
+      const t0 = 1.4 + i * 0.45;
+      st.opacity = eo(seg(t, t0, t0 + 0.3));
+      st.transform = 'translateY(' + lerp(40, 0, eob(seg(t, t0, t0 + 0.7), 1.6)) + 'px)';
+    });
+    const h = eob(seg(t, 3.6, 4.1), 1.8);
+    this.hub.setAttribute('transform', 'translate(' + HB[0] + ' ' + HB[1] + ') scale(' + h + ') rotate(' + t * 12 + ') translate(' + -HB[0] + ' ' + -HB[1] + ')');
+    this.hub.style.opacity = seg(t, 3.6, 3.7);
+    this.mcp.setAttribute('transform', 'translate(' + HB[0] + ' ' + HB[1] + ') scale(' + h + ') translate(' + -HB[0] + ' ' + -HB[1] + ')');
+    this.mcp.style.opacity = seg(t, 3.6, 3.7);
+    this.nodes.forEach((g, i) => {
+      const t0 = 4.0 + i * 0.35, [x, y] = ND[i];
+      const bob = Math.sin((t + i) * 2.1) * 4;
+      g.setAttribute('transform', 'translate(' + x + ' ' + (y + bob) + ') scale(' + eob(seg(t, t0, t0 + 0.5), 1.7) + ') translate(' + -x + ' ' + -y + ')');
+      g.style.opacity = seg(t, t0, t0 + 0.1);
+      this.links[i].style.strokeDashoffset = 1 - eio(seg(t, t0 + 0.3, t0 + 0.9));
+    });
+    this.plug.style.strokeDashoffset = 1 - eio(seg(t, 5.4, 6.0));
+    this.ext.opacity = eo(seg(t, 5.0, 5.5));
+    const r = seg(t, 6.2, 7.4);
+    const g = Math.sin(r * Math.PI);
+    this.adv.borderColor = 'color-mix(in srgb, var(--main) ' + (g * 100).toFixed(1) + '%, color-mix(in srgb, var(--ground) 22%, var(--second)))';
+    this.adv.boxShadow = '0 0 0 ' + (g * 6).toFixed(2) + 'px color-mix(in srgb, var(--main) 45%, transparent)';
+  },
+});
+})(mkKit('tools'));
+(function(kit){
+const { seg, eo, eio, eob, lerp, TextFx } = kit;
+const BS = [
+  ['Intake', 'Your request is logged', 'color-mix(in srgb, var(--ground) 22%, var(--second))'],
+  ['Author', 'Agents draft the change', 'color-mix(in srgb, var(--accent) 70%, var(--second))'],
+  ['Approve', 'Reviewers sign off', 'color-mix(in srgb, var(--main) 60%, var(--second))'],
+  ['Publish', 'Packaged as a change request', 'var(--main)'],
+];
+const X0 = 120, STEP = 320, W = 310, PT = 44, Y = 560, H = 130;
+const cx = (i) => X0 + i * STEP + (W + PT) / 2;
+const ARR = (i) => 2.2 + i * 1.0;
+kit.scene('born', {
+  init(kit) {
+    let polys = '', caps = '';
+    BS.forEach(([n, c, fill], i) => {
+      const x = X0 + i * STEP;
+      const pts = [[x, Y], [x + W, Y], [x + W + PT, Y + H / 2], [x + W, Y + H], [x, Y + H]];
+      if (i > 0) pts.push([x + PT, Y + H / 2]);
+      polys += '<g class="born-chev"><polygon points="' + pts.map((p) => p.join(',')).join(' ') + '" style="fill:' + fill + '"/>' +
+        '<text x="' + (cx(i) + (i > 0 ? PT / 2 : 0) - 10) + '" y="' + (Y + H / 2 + 12) + '" text-anchor="middle" style="fill:var(--ground);font-size:34px;font-weight:700">' + n + '</text></g>';
+      caps += '<p class="born-cap" style="position:absolute;margin:0;left:' + (x + 10) + 'px;top:' + (Y + H + 24) + 'px;width:' + W + 'px;font-size:26px;line-height:1.3;text-align:center;color:color-mix(in srgb, var(--ground) 85%, var(--second))">' + c + '</p>';
+    });
+    this.root = kit.h('<div class="ground"><div class="born-cam" style="position:absolute;inset:0;transform-origin:0 0">' + window.LY.building() + '</div>' +
+      '<div class="born-in" style="position:absolute;inset:0;background:var(--second);color:var(--ground)">' +
+      '<div class="words" style="left:120px;top:150px;width:1500px"><p class="tag born-tag" style="color:color-mix(in srgb, var(--main) 55%, var(--ground))">Inside Customer Engagement Studio</p>' +
+      '<h2 class="line born-line">A change takes shape</h2>' +
+      '<p class="sub born-sub" style="color:color-mix(in srgb, var(--ground) 75%, var(--second))">The agents draft it. Then it moves through each step.</p></div>' +
+      '<svg class="art" viewBox="0 0 1920 1080">' + polys + '</svg>' + caps + '</div>' +
+      '<div class="card born-card" style="left:0;top:0"><i></i><i></i><i style="width:50px"></i><i></i></div></div>');
+    kit.stage.append(this.root);
+    const q = (s) => this.root.querySelector(s);
+    this.cam = q('.born-cam').style;
+    this.inside = q('.born-in').style;
+    this.tag = q('.born-tag').style;
+    this.sub = q('.born-sub').style;
+    this.line = q('.born-line');
+    this.chev = [...this.root.querySelectorAll('.born-chev')];
+    this.caps = [...this.root.querySelectorAll('.born-cap')].map((e) => e.style);
+    this.card = q('.born-card').style;
+  },
+  render(t) {
+    this.tag.opacity = eo(seg(t, -0.2, 0.2));
+    TextFx.fadeFromRight(this.line, t, 0.1);
+    const s = eo(seg(t, 0.9, 1.4));
+    this.sub.opacity = s;
+    this.sub.transform = 'translateX(' + lerp(26, 0, s) + 'px)';
+    const base = eo(seg(t, 0.6, 1.1));
+    this.chev.forEach((g, i) => {
+      const on = eo(seg(t, ARR(i) - 0.1, ARR(i) + 0.3));
+      g.style.opacity = base * lerp(0.3, 1, on);
+      const pop = 1 + Math.sin(seg(t, ARR(i) - 0.05, ARR(i) + 0.4) * Math.PI) * 0.04;
+      const c = cx(i);
+      g.setAttribute('transform', 'translate(' + c + ' ' + (Y + H / 2) + ') scale(' + pop + ') translate(' + -c + ' ' + -(Y + H / 2) + ')');
+      this.caps[i].opacity = base * lerp(0.3, 1, on);
+    });
+    let x = cx(0);
+    for (let i = 1; i < 4; i++) x = lerp(x, cx(i), eio(seg(t, ARR(i) - 0.6, ARR(i))));
+    const hop = [1, 2, 3].reduce((a, i) => a + Math.sin(seg(t, ARR(i) - 0.6, ARR(i)) * Math.PI) * 28, 0);
+    const back = eio(seg(t, 6.0, 7.4));
+    const px = lerp(x, 1680, back), py = lerp(440 - hop, 275, back);
+    const sc = lerp(0.6 * eob(seg(t, 1.5, 1.95), 1.7), 1, back);
+    const rot = Math.sin(t * 1.7) * 3 * (1 - back);
+    this.card.transform = 'translate(' + (px - 60) + 'px,' + (py - 75) + 'px) scale(' + sc + ') rotate(' + rot + 'deg)';
+    this.card.opacity = eo(seg(t, 1.5, 1.65));
+    const z = Math.exp(lerp(Math.log(2.4), Math.log(1.04), back));
+    this.cam.transform = 'translate(' + lerp(960 - 1370 * 2.4, 1370 * -0.04, back) + 'px,' + lerp(540 - 290 * 2.4, 520 * -0.04, back) + 'px) scale(' + z + ')';
+    const f = 1 - eo(seg(t, 6.0, 6.5));
+    this.inside.opacity = f;
+    this.inside.transform = 'scale(' + lerp(1.06, 1, f) + ')';
+    window.LY.spin(this.root, t);
+  },
+});
+})(mkKit('born'));
+(function(kit){
+const { seg, eo, eio, eob, lerp, TextFx } = kit;
+kit.scene('path', {
+  init(kit) {
+    this.root = kit.h('<div class="ground"><div style="position:absolute;inset:0;transform-origin:1370px 520px;transform:scale(1.04)">' + window.LY.building() + '</div>' +
+      '<svg class="art" viewBox="0 0 1920 1080"><defs><clipPath id="path-clip"><rect class="path-cliprect" x="880" y="280" width="100" height="0"/></clipPath></defs>' +
+      '<path clip-path="url(#path-clip)" d="M962 300 H918 V790 H956" style="fill:none;stroke:var(--accent);stroke-width:5;stroke-dasharray:14 12;stroke-linecap:round"/>' +
+      '<path clip-path="url(#path-clip)" d="M938 772 L958 790 L938 808" style="fill:none;stroke:var(--accent);stroke-width:5;stroke-linecap:round;stroke-linejoin:round"/>' +
+      '<g class="path-cross" style="stroke:var(--accent);stroke-width:12;stroke-linecap:round"><circle cx="918" cy="545" r="34" style="fill:var(--ground);stroke-width:5"/><path d="M904 531 L932 559 M932 531 L904 559"/></g></svg>' +
+      '<div class="path-glow" style="position:absolute;left:944px;top:666px;width:853px;height:250px;box-sizing:border-box;border-radius:17px;border:6px solid var(--accent)"></div>' +
+      '<p class="pill path-cr" style="left:984px;top:566px">Change request</p><p class="pill path-rv" style="left:1296px;top:566px">Release vehicle</p>' +
+      '<div class="card path-card"><i></i><i></i><i style="width:50px"></i><i></i>' +
+      '<div class="path-ok" style="position:absolute;right:-22px;top:-22px;width:52px;height:52px;border-radius:26px;background:var(--main)"><svg viewBox="0 0 52 52" style="position:absolute;inset:0"><path d="M15 27 L23 35 L38 18" style="fill:none;stroke:var(--ground);stroke-width:6;stroke-linecap:round;stroke-linejoin:round"/></svg></div></div>' +
+      '<div class="words path-words" style="left:120px;top:230px;width:700px"><p class="tag path-tag">The one rule</p>' +
+      '<h2 class="line path-line">No direct line to production</h2>' +
+      '<p class="sub path-sub">Every change goes through Ops Manager first.</p>' +
+      '<p class="sub path-sub2">Here it is approved and scheduled for release.</p></div></div>');
+    kit.stage.append(this.root);
+    const q = (s) => this.root.querySelector(s);
+    this.clip = q('.path-cliprect');
+    this.cross = q('.path-cross');
+    this.card = q('.path-card').style;
+    this.ok = q('.path-ok').style;
+    this.glow = q('.path-glow').style;
+    this.cr = q('.path-cr').style;
+    this.rv = q('.path-rv').style;
+    this.words = q('.path-words').style;
+    this.tag = q('.path-tag').style;
+    this.sub = q('.path-sub').style;
+    this.sub2 = q('.path-sub2').style;
+    this.line = q('.path-line');
+  },
+  render(t) {
+    const out = 1 - eo(seg(t, 8.1, 8.7));
+    this.words.opacity = out;
+    this.clip.parentNode.parentNode.parentNode.style.opacity = out;
+    this.tag.opacity = eo(seg(t, 0, 0.4));
+    TextFx.fadeFromRight(this.line, t, 0.2);
+    for (const [st, t0] of [[this.sub, 1.4], [this.sub2, 6.4]]) {
+      const s = eo(seg(t, t0, t0 + 0.6));
+      st.opacity = s;
+      st.transform = 'translateX(' + lerp(26, 0, s) + 'px)';
+    }
+    this.clip.setAttribute('height', lerp(0, 540, eio(seg(t, 1.2, 2.2))));
+    const c = eob(seg(t, 2.75, 3.1), 1.9);
+    const sh = seg(t, 2.9, 3.5);
+    const shake = Math.sin(sh * Math.PI * 4) * 6 * (1 - sh);
+    this.cross.setAttribute('transform', 'translate(' + (918 + shake) + ' 545) scale(' + c + ') translate(-918 -545)');
+    const go = eio(seg(t, 2.0, 2.8)), rec = eio(seg(t, 2.9, 3.6)), down = eio(seg(t, 4.0, 5.0));
+    let x = lerp(1620, 990, go), y = lerp(200, 260, go);
+    x = lerp(x, 1620, rec); y = lerp(y, 200, rec);
+    y = lerp(y, 462, down);
+    x += Math.sin(down * Math.PI) * 30;
+    const rot = Math.sin(t * 1.3) * 2 * (1 - seg(t, 7.5, 8.8)) + Math.sin(seg(t, 2.8, 3.3) * Math.PI) * -8;
+    this.card.transform = 'translate(' + x + 'px,' + y + 'px) rotate(' + rot + 'deg)';
+    this.card.borderColor = t > 5.15 ? 'var(--main)' : 'var(--second)';
+    this.ok.transform = 'scale(' + eob(seg(t, 5.1, 5.45), 1.8) + ')';
+    this.ok.opacity = seg(t, 5.1, 5.2);
+    for (const [st, t0] of [[this.cr, 5.6], [this.rv, 6.0]]) {
+      st.opacity = eo(seg(t, t0, t0 + 0.25)) * out;
+      st.transform = 'translateY(' + lerp(24, 0, eob(seg(t, t0, t0 + 0.55), 1.6)) + 'px)';
+    }
+    this.glow.opacity = 0;
+    window.LY.spin(this.root, t + 8.5);
+  },
+});
+})(mkKit('path'));
+(function(kit){
+const { seg, eo, eio, eob, lerp, TextFx } = kit;
+const Z0 = 1.04, Z1 = 2.6, C0 = [(960 + 1370 * 0.04) / Z0, (540 + 520 * 0.04) / Z0], C1 = [1370, 540];
+const PW0 = [(1620 + 1370 * 0.04) / Z0, (462 + 520 * 0.04) / Z0];
+const SX = (i) => 200 + i * 125, SY = 480, MINE = 4;
+const VS = [5.0, 4.6, 4.2, 3.8], VA = [6.0, 5.6, 5.3, 5.0], VL = [9.6, 9.2, 8.8, 8.4];
+const STOP = (j) => 325 + 375 * j;
+const vx = (t, j) => lerp(lerp(-400, STOP(j), eio(seg(t, VS[j], VA[j]))), 2350, eio(seg(t, VL[j], VL[j] + 1.4)));
+kit.scene('ops', {
+  init(kit) {
+    const L = window.LY;
+    let veh = '', papers = '';
+    for (let j = 0; j < 4; j++) veh += L.vehicle('Release ' + (j + 1), 'ops-veh');
+    this.order = [];
+    for (let i = 0; i < 12; i++) if (i !== MINE) { this.order.push(i); papers += L.paper(i, 'ops-o', false); }
+    this.root = kit.h('<div class="ground"><div class="ops-cam" style="position:absolute;inset:0;transform-origin:0 0">' + L.building() + '</div>' +
+      '<div class="ops-in" style="position:absolute;inset:0;background:color-mix(in srgb, var(--main) 16%, var(--ground));color:var(--second)">' +
+      '<div class="words" style="left:120px;top:110px;width:1680px"><p class="tag ops-tag">Inside 1:1 Operations Manager</p>' +
+      '<h2 class="line ops-line">Many changes, many releases</h2>' +
+      '<p class="sub ops-sub">Approved change requests ride release vehicles to production.</p></div>' +
+      '<p class="tag ops-slot" style="position:absolute;margin:0;left:120px;top:356px;color:var(--second)">Approved change requests</p>' +
+      '<div style="position:absolute;left:0;top:902px;width:1920px;height:6px;background:color-mix(in srgb, var(--second) 30%, var(--ground))"></div>' +
+      '<p class="ops-prod" style="position:absolute;margin:0;left:1560px;top:934px;font-size:28px;font-weight:700;color:var(--main)">To production \u2192</p></div>' +
+      veh + papers + L.paper(MINE, 'ops-mine', true) + '</div>');
+    kit.stage.append(this.root);
+    const q = (s) => this.root.querySelector(s);
+    this.cam = q('.ops-cam').style;
+    this.inside = q('.ops-in').style;
+    this.tag = q('.ops-tag').style;
+    this.sub = q('.ops-sub').style;
+    this.line = q('.ops-line');
+    this.slot = q('.ops-slot').style;
+    this.prod = q('.ops-prod').style;
+    this.veh = [...this.root.querySelectorAll('.ops-veh')].map((e) => e.style);
+    this.os = [...this.root.querySelectorAll('.ops-o')].map((e) => ({ st: e.style, ok: e.querySelector('.ly-ok').style }));
+    this.mine = q('.ops-mine').style;
+  },
+  hop(t, i, cx, cy, s) {
+    const j = Math.floor(i / 3), k = i % 3;
+    const H = VA[j] + 0.3 + k * 0.25, h = eio(seg(t, H, H + 0.55));
+    const dx = vx(t, j) + (k - 1) * 84, dy = window.LY.DECK;
+    return [lerp(cx, dx, h), lerp(cy, dy, h) - Math.sin(h * Math.PI) * 80, lerp(s, window.LY.PSC, h)];
+  },
+  render(t) {
+    const p = eio(seg(t, 0.3, 1.7));
+    const z = Math.exp(lerp(Math.log(Z0), Math.log(Z1), p));
+    const tx = 960 - lerp(C0[0], C1[0], p) * z, ty = 540 - lerp(C0[1], C1[1], p) * z;
+    this.cam.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + z + ')';
+    const f = eo(seg(t, 1.5, 1.9));
+    this.inside.opacity = f;
+    this.tag.opacity = eo(seg(t, 1.9, 2.3));
+    TextFx.fadeFromRight(this.line, t, 2.0);
+    const su = eo(seg(t, 2.8, 3.4));
+    this.sub.opacity = su;
+    this.sub.transform = 'translateX(' + lerp(26, 0, su) + 'px)';
+    this.slot.opacity = eo(seg(t, 2.2, 2.6));
+    this.prod.opacity = eo(seg(t, 4.0, 4.5));
+    const ps = z / Z0;
+    const pcx = tx + z * PW0[0] + 60 * ps, pcy = ty + z * PW0[1] + 75 * ps;
+    const a = eio(seg(t, 2.0, 3.0));
+    let [mx, my, ms] = this.hop(t, MINE, lerp(pcx, SX(MINE), a), lerp(pcy, SY, a), lerp(ps, 0.5, a));
+    this.mine.transform = 'translate(' + (mx - 60) + 'px,' + (my - 75) + 'px) scale(' + ms + ')';
+    this.os.forEach((o, n) => {
+      const i = this.order[n], t0 = 2.2 + n * 0.13;
+      const m = eio(seg(t, t0, t0 + 0.7));
+      const [x, y, s] = this.hop(t, i, SX(i), lerp(SY - 40, SY, m), 0.5);
+      o.st.transform = 'translate(' + (x - 60) + 'px,' + (y - 75) + 'px) scale(' + s + ')';
+      o.st.opacity = eo(seg(t, t0, t0 + 0.4));
+      o.ok.transform = 'scale(' + eob(seg(t, t0 + 0.7, t0 + 1.0), 1.8) + ')';
+    });
+    this.veh.forEach((st, j) => {
+      const x = vx(t, j);
+      const bob = Math.abs(Math.sin(t * 9 + j)) * 3 * (seg(t, VS[j], VA[j]) < 1 && seg(t, VS[j], VA[j]) > 0 || (seg(t, VL[j], VL[j] + 1.4) > 0 && seg(t, VL[j], VL[j] + 1.4) < 1) ? 1 : 0);
+      st.transform = 'translate(' + (x - 150) + 'px,' + (window.LY.ROAD - 130 - bob) + 'px)';
+    });
+    window.LY.spin(this.root, t + 17.5);
+  },
+});
+})(mkKit('ops'));
+(function(kit){
+const { seg, eo, eio, eob, lerp, TextFx } = kit;
+function rng(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const HUBX = [280, 620, 960, 1300, 1640], HUBY = 560;
+const STEPS = [['Signal in', 'A click, call or visit'], ['Knows them', 'Profile and live context'], ['Checks rules', 'Eligibility and policies'], ['Predicts', 'Adaptive AI models'], ['Decides', 'The next best action']];
+const LIT = (i) => 11.7 + i * 0.9;
+const RINGT = [5.2, 6.2, 7.0, 7.8];
+const ringOf = (x, y) => { const d = Math.hypot(x - 960, y - 540); return d < 250 ? 0 : d < 520 ? 1 : d < 850 ? 2 : 3; };
+const ZN = 4, PS = 0.55, MINE = 4;
+const VS = [0.95, 0.7, 0.45, 0.2], VA = [2.2, 2.0, 1.8, 1.6], VL = [5.0, 4.8, 4.6, 4.4];
+const STOP = (j) => 380 + 380 * j;
+const vx = (t, j) => lerp(lerp(-400, STOP(j), eio(seg(t, VS[j], VA[j]))), 2350, eio(seg(t, VL[j], VL[j] + 1.3)));
+kit.scene('brain', {
+  init(kit) {
+    const L = window.LY;
+    const r = rng(7), N = [], idx = {};
+    for (let i = -3; i <= 31; i++) for (let j = -3; j <= 18; j++) {
+      idx[i + ',' + j] = N.length;
+      const x = i * 68 + 8 + (r() - 0.5) * 44, y = j * 68 + 4 + (r() - 0.5) * 44;
+      const near = Math.hypot(x - 960, y - 540) < 150;
+      N.push({ x, y, near, rad: near ? 7 : 4.5 + r() * 2.5 });
+    }
+    const E = [];
+    for (let i = -3; i <= 31; i++) for (let j = -3; j <= 18; j++) {
+      const a = idx[i + ',' + j];
+      [[1, 0, 0.85], [0, 1, 0.85], [1, 1, 0.35], [1, -1, 0.25]].forEach(([di, dj, p]) => {
+        const b = idx[(i + di) + ',' + (j + dj)];
+        if (b !== undefined && r() < p) E.push([a, b, ringOf((N[a].x + N[b].x) / 2, (N[a].y + N[b].y) / 2)]);
+      });
+    }
+    const ed = ['', '', '', ''], dots = ['', '', '', ''];
+    E.forEach(([a, b, g]) => { ed[g] += 'M' + N[a].x.toFixed(1) + ' ' + N[a].y.toFixed(1) + 'L' + N[b].x.toFixed(1) + ' ' + N[b].y.toFixed(1); });
+    N.forEach((n) => {
+      dots[ringOf(n.x, n.y)] += '<circle cx="' + n.x.toFixed(1) + '" cy="' + n.y.toFixed(1) + '" r="' + n.rad.toFixed(1) + '" style="fill:' + (n.near ? 'color-mix(in srgb, var(--main) 70%, var(--ground))' : 'color-mix(in srgb, var(--accent) 55%, var(--ground))') + ';opacity:' + (n.near ? 1 : 0.65) + '"/>';
+    });
+    let rings = '';
+    for (let g = 0; g < 4; g++) rings += '<g class="brain-ring"><path d="' + ed[g] + '" style="fill:none;stroke:color-mix(in srgb, var(--accent) 60%, var(--ground));stroke-width:1.5;opacity:.3" vector-effect="non-scaling-stroke"/>' + dots[g] + '</g>';
+    this.P = [];
+    let pul = '';
+    for (let k = 0; k < 150; k++) {
+      this.P.push({ e: E[Math.floor(r() * E.length)], sp: 0.35 + r() * 0.6, off: r() });
+      pul += '<circle class="brain-p" r="4" style="fill:color-mix(in srgb, var(--main) 45%, var(--ground))"/>';
+    }
+    this.N = N;
+    const cl = N.filter((n) => Math.abs(n.x - 960) < 230 && Math.abs(n.y - 540) < 125).sort((a, b) => Math.hypot(a.x - 960, a.y - 540) - Math.hypot(b.x - 960, b.y - 540));
+    this.cards = [];
+    let ride = '', stream = '', mine = '';
+    let ni = 1;
+    for (let i = 0; i < 12; i++) {
+      const n = i === MINE ? cl[0] : cl[ni++];
+      this.cards.push({ i, n, ride: true, mine: i === MINE, t0: 2.5 + (11 - i) * 0.12 });
+      if (i === MINE) mine = L.paper(i, 'brain-c', true); else ride += L.paper(i, 'brain-c', false);
+    }
+    const rest = cl.slice(ni, ni + 18);
+    rest.forEach((n, k) => {
+      this.cards.push({ i: 12 + k, n, ride: false, t0: 2.9 + ((k * 7) % 18) * 0.09, dx: (r() - 0.5) * 500, r0: (r() - 0.5) * 40 });
+      stream += L.paper(12 + k, 'brain-c', false);
+    });
+    let veh = '';
+    for (let j = 0; j < 4; j++) veh += L.vehicle('Release ' + (j + 1), 'brain-veh');
+    let hubs = '', labs = '';
+    HUBX.forEach((x, i) => {
+      hubs += '<g class="brain-hub"><circle cx="' + x + '" cy="' + HUBY + '" r="40" style="fill:var(--main);opacity:.22"/><circle cx="' + x + '" cy="' + HUBY + '" r="22" style="fill:var(--main);stroke:var(--ground);stroke-width:4"/></g>';
+      labs += '<div class="brain-lab" style="position:absolute;left:' + (x - 166) + 'px;top:' + (HUBY + 52) + 'px;width:332px;box-sizing:border-box;padding:22px 24px;border-radius:18px;background:color-mix(in srgb, color-mix(in srgb, var(--accent) 22%, var(--second)) 96%, transparent);text-align:center;display:flex;flex-direction:column;gap:6px">' +
+        '<p style="margin:0;font-family:var(--display, var(--sans, system-ui, sans-serif));font-size:32px;line-height:1.1;font-weight:700">' + STEPS[i][0] + '</p>' +
+        '<p style="margin:0;font-size:26px;line-height:1.3;color:color-mix(in srgb, var(--ground) 92%, var(--accent))">' + STEPS[i][1] + '</p></div>';
+    });
+    const BG = 'color-mix(in srgb, var(--accent) 22%, var(--second))';
+    const COLS = ['var(--main)', 'color-mix(in srgb, var(--main) 45%, var(--ground))', 'color-mix(in srgb, var(--accent) 55%, var(--second))'];
+    const PAT = [0, 2, 1, 2, 0, 2, 2, 1, 0, 2, 1, 0, 2, 2, 0, 1, 2, 0, 2, 1, 2, 0, 0, 2, 1, 2, 0, 2, 1, 0, 2, 2, 0, 1, 2];
+    const ENTRIES = PAT.map((c) => '<span class="brain-en" style="display:block;flex:none;width:38px;height:38px;border-radius:9px;background:' + COLS[c] + '"></span>').join('');
+    this.RP = [];
+    let rpul = '';
+    for (let k = 0; k < 90; k++) {
+      this.RP.push({ e: E[Math.floor(r() * E.length)], sp: 0.4 + r() * 0.5, off: r() });
+      rpul += '<circle class="brain-rp" r="4.5" style="fill:var(--ground)"/>';
+    }
+    const mini = '<div class="brain-mini" style="position:absolute;left:0;top:0;width:120px;height:56px;opacity:0"><div style="position:absolute;left:30px;top:-18px;width:60px;height:22px;box-sizing:border-box;border-radius:4px;background:color-mix(in srgb, var(--ground) 40%, #FFFFFF);border:2px solid var(--main)"></div><div style="position:absolute;left:0;top:0;width:120px;height:42px;border-radius:9px;background:var(--second)"></div><div style="position:absolute;left:16px;top:36px;width:20px;height:20px;box-sizing:border-box;border-radius:10px;background:var(--second);border:3px solid var(--ground)"></div><div style="position:absolute;left:84px;top:36px;width:20px;height:20px;box-sizing:border-box;border-radius:10px;background:var(--second);border:3px solid var(--ground)"></div></div>';
+    this.root = kit.h('<div class="ground"><div class="brain-cam" style="position:absolute;inset:0;transform-origin:0 0">' + L.building() +
+      '<div class="brain-glow" style="position:absolute;left:960px;top:660px;width:820px;height:240px;box-sizing:border-box;border-radius:16px;border:5.8px solid var(--accent);opacity:0"></div>' + mini + mini + mini + mini + '</div>' +
+      '<div class="brain-in" style="position:absolute;inset:0;background:' + BG + ';color:var(--ground);overflow:hidden">' +
+      '<svg class="art" viewBox="0 0 1920 1080"><g class="brain-net">' + rings + pul + rpul + '</g></svg>' +
+      '<div style="position:absolute;inset:0;background:linear-gradient(180deg, ' + BG + ' 0%, color-mix(in srgb, ' + BG + ' 60%, transparent) 38%, transparent 52%)"></div>' +
+      '<div class="brain-scrim2" style="position:absolute;inset:0;background:linear-gradient(180deg, transparent 72%, color-mix(in srgb, ' + BG + ' 85%, transparent) 88%)"></div>' +
+      '<div class="brain-road" style="position:absolute;left:0;top:902px;width:1920px;height:6px;background:color-mix(in srgb, var(--ground) 30%, transparent)"></div>' +
+      veh + stream + ride + mine +
+      '<svg class="art" viewBox="0 0 1920 1080"><path class="brain-flow" d="M' + HUBX[0] + ' ' + HUBY + ' H' + HUBX[4] + '" pathLength="1" style="fill:none;stroke:var(--main);stroke-width:6;stroke-linecap:round;stroke-dasharray:1 1"/>' + hubs +
+      '<circle class="brain-dot" r="12" cy="' + HUBY + '" style="fill:var(--ground)"/></svg>' + labs +
+      '<div class="words brain-words" style="left:64px;top:64px;max-width:1680px;padding:40px 56px;border-radius:26px"><p class="tag brain-tag" style="color:color-mix(in srgb, var(--main) 50%, var(--ground))">In production \u00b7 Customer Decision Hub</p>' +
+      '<h2 class="line brain-line">The brain behind every decision</h2>' +
+      '<p class="sub brain-sub" style="color:color-mix(in srgb, var(--ground) 92%, var(--accent))">It turns hundreds of approved changes into live decisions, for every customer.</p></div>' +
+      '<p class="brain-end" style="position:absolute;margin:0;left:64px;top:796px;max-width:1680px;padding:36px 56px;border-radius:26px;font-family:var(--display, var(--sans, system-ui, sans-serif));font-size:46px;line-height:1.15;font-weight:700">Mission-critical at this scale, so every change goes through a change request.</p>' +
+      '<div class="words brain-w2" style="left:64px;top:64px;max-width:1680px;padding:40px 56px;border-radius:26px;background:color-mix(in srgb, color-mix(in srgb, var(--accent) 22%, var(--second)) 96%, transparent)"><p class="tag brain-t2" style="color:color-mix(in srgb, var(--main) 50%, var(--ground))">After every decision</p>' +
+      '<h2 class="line brain-l2">Every decision leaves a trail</h2>' +
+      '<p class="sub brain-s2" style="color:color-mix(in srgb, var(--ground) 92%, var(--accent))">Customers respond, and every response is recorded.</p></div>' +
+      '<div class="brain-pl brain-pa" style="position:absolute;left:64px;top:420px;width:860px;box-sizing:border-box;padding:36px 48px;border-radius:26px;background:color-mix(in srgb, color-mix(in srgb, var(--accent) 22%, var(--second)) 96%, transparent);border:3px solid color-mix(in srgb, var(--main) 70%, transparent);display:flex;flex-direction:column;gap:12px"><p class="tag" style="margin:0;color:color-mix(in srgb, var(--main) 55%, var(--ground))">Automatic</p><h3 style="margin:0;font-family:var(--display, var(--sans, system-ui, sans-serif));font-size:42px;line-height:1.15;font-weight:700">Models learn on their own</h3><p style="margin:0;font-size:28px;line-height:1.35;color:color-mix(in srgb, var(--ground) 88%, var(--accent))">Adaptive models update with every response. No change request needed.</p></div>' +
+      '<div class="brain-pl brain-pb" style="position:absolute;left:996px;top:420px;width:860px;box-sizing:border-box;padding:36px 48px;border-radius:26px;background:color-mix(in srgb, color-mix(in srgb, var(--accent) 22%, var(--second)) 96%, transparent);border:3px solid color-mix(in srgb, var(--accent) 80%, transparent);display:flex;flex-direction:column;gap:12px"><p class="tag" style="margin:0;color:color-mix(in srgb, var(--accent) 45%, var(--ground))">Governed</p><h3 style="margin:0;font-family:var(--display, var(--sans, system-ui, sans-serif));font-size:42px;line-height:1.15;font-weight:700">Structural changes need a change request</h3><p style="margin:0;font-size:28px;line-height:1.35;color:color-mix(in srgb, var(--ground) 88%, var(--accent))">New actions, treatments, rules or strategies follow the full governed path.</p></div>' +
+      '<div class="brain-ledger" style="position:absolute;left:64px;top:836px;width:1792px;box-sizing:border-box;padding:26px 36px;border-radius:26px;background:color-mix(in srgb, color-mix(in srgb, var(--accent) 22%, var(--second)) 96%, transparent)"><div style="display:flex;justify-content:space-between;align-items:center;gap:24px"><p class="tag" style="margin:0;color:color-mix(in srgb, var(--main) 50%, var(--ground))">Interaction history</p>' +
+      '<p style="margin:0;font-size:24px;color:color-mix(in srgb, var(--ground) 88%, var(--accent))"><span style="display:inline-block;width:20px;height:20px;border-radius:5px;vertical-align:-3px;background:var(--main)"></span> Accepted &nbsp;&nbsp;<span style="display:inline-block;width:20px;height:20px;border-radius:5px;vertical-align:-3px;background:color-mix(in srgb, var(--main) 45%, var(--ground))"></span> Clicked &nbsp;&nbsp;<span style="display:inline-block;width:20px;height:20px;border-radius:5px;vertical-align:-3px;background:color-mix(in srgb, var(--accent) 55%, var(--second))"></span> Ignored</p></div>' +
+      '<div style="display:flex;gap:10px;margin-top:20px">' + ENTRIES + '</div></div></div></div>');
+    this.cam = this.root.querySelector('.brain-cam').style;
+    this.glow = this.root.querySelector('.brain-glow').style;
+    this.inside = this.root.querySelector('.brain-in').style;
+    this.minis = [...this.root.querySelectorAll('.brain-mini')].map((e) => e.style);
+    kit.stage.append(this.root);
+    const q = (s) => this.root.querySelector(s);
+    this.net = q('.brain-net');
+    this.rings = [...this.root.querySelectorAll('.brain-ring')];
+    this.pul = [...this.root.querySelectorAll('.brain-p')];
+    const els = [...this.root.querySelectorAll('.brain-c')];
+    const ns = this.cards.length - 12;
+    const streamEls = els.slice(0, ns), rideEls = els.slice(ns, ns + 11), mineEl = els[ns + 11];
+    let ri = 0, si = 0;
+    this.cards.forEach((c) => { c.st = (c.mine ? mineEl : c.ride ? rideEls[ri++] : streamEls[si++]).style; });
+    this.veh = [...this.root.querySelectorAll('.brain-veh')].map((e) => e.style);
+    this.road = q('.brain-road').style;
+    this.scrim2 = q('.brain-scrim2').style;
+    this.flow = q('.brain-flow');
+    this.dot = q('.brain-dot');
+    this.hubs = [...this.root.querySelectorAll('.brain-hub')];
+    this.labs = [...this.root.querySelectorAll('.brain-lab')].map((e) => e.style);
+    this.tag = q('.brain-tag').style;
+    this.sub = q('.brain-sub').style;
+    this.line = q('.brain-line');
+    this.end = q('.brain-end');
+    this.words = q('.brain-words').style;
+    this.rpul = [...this.root.querySelectorAll('.brain-rp')];
+    this.w2 = q('.brain-w2').style;
+    this.t2 = q('.brain-t2').style;
+    this.l2 = q('.brain-l2');
+    this.s2 = q('.brain-s2').style;
+    this.pa = q('.brain-pa').style;
+    this.pb = q('.brain-pb').style;
+    this.ledger = q('.brain-ledger').style;
+    this.ens = [...this.root.querySelectorAll('.brain-en')].map((e) => e.style);
+    this.hubsvg = this.flow.parentNode.style;
+  },
+  render(t) {
+    const cp = eio(seg(t, 2.3, 3.5));
+    const cz = Math.exp(lerp(Math.log(1.04), Math.log(2.4), cp));
+    const ccx = lerp((960 + 1370 * 0.04) / 1.04, 1370, cp), ccy = lerp((540 + 520 * 0.04) / 1.04, 780, cp);
+    this.cam.transform = 'translate(' + (960 - ccx * cz) + 'px,' + (540 - ccy * cz) + 'px) scale(' + cz + ')';
+    this.glow.opacity = 0.9 * eo(seg(t, 1.9, 2.4));
+    this.inside.opacity = eo(seg(t, 3.2, 3.6));
+    this.minis.forEach((st, j) => {
+      const d = eio(seg(t, 0.6 + j * 0.25, 1.6 + j * 0.25));
+      st.opacity = eo(seg(t, 0.1 + j * 0.15, 0.4 + j * 0.15));
+      st.transform = 'translate(' + (1020 + j * 170) + 'px,' + lerp(560, 800, d) + 'px)';
+    });
+    window.LY.spin(this.root, t);
+    t -= 3.6;
+    const L = window.LY;
+    this.veh.forEach((st, j) => {
+      const moving = (seg(t, VS[j], VA[j]) > 0 && seg(t, VS[j], VA[j]) < 1) || (seg(t, VL[j], VL[j] + 1.3) > 0 && seg(t, VL[j], VL[j] + 1.3) < 1);
+      st.transform = 'translate(' + (vx(t, j) - 150) + 'px,' + (L.ROAD - 130 - (moving ? Math.abs(Math.sin(t * 9 + j)) * 3 : 0)) + 'px)';
+    });
+    this.road.opacity = 1 - eo(seg(t, 5.0, 6.0));
+    this.scrim2.opacity = eo(seg(t, 8.5, 9.5));
+    const k = eio(seg(t, 5.0, 5.8));
+    const fade = 1 - eo(seg(t, 5.3, 5.8));
+    this.cards.forEach((c) => {
+      const nx = 960 + (c.n.x - 960) * ZN, ny = 540 + (c.n.y - 540) * ZN;
+      let x, y, s, rot = 0, op;
+      const m = eio(seg(t, c.t0, c.t0 + 0.9));
+      if (c.ride) {
+        const j = Math.floor(c.i / 3), kk = c.i % 3;
+        const dx = vx(t, j) + (kk - 1) * 84, dy = L.DECK;
+        x = lerp(dx, nx, m); y = lerp(dy, ny, m) - Math.sin(m * Math.PI) * 120;
+        s = lerp(L.PSC, PS, m);
+        op = 1;
+      } else {
+        x = lerp(nx + c.dx, nx, m); y = lerp(-250, ny, m); s = PS; rot = lerp(c.r0, 0, m);
+        op = seg(t, c.t0, c.t0 + 0.15) * 0.85;
+      }
+      s *= 1 - 0.92 * k;
+      c.st.transform = 'translate(' + (x - 60) + 'px,' + (y - 75) + 'px) scale(' + s + ') rotate(' + rot + 'deg)';
+      c.st.opacity = op * fade;
+    });
+    const zn = (t < 6.0 ? ZN : Math.exp(lerp(Math.log(ZN), 0, eio(seg(t, 6.0, 9.6))))) * lerp(1, 0.96, seg(t, 9.6, 19.5));
+    this.net.setAttribute('transform', 'translate(960 540) scale(' + zn + ') translate(-960 -540)');
+    const ro = RINGT.map((r0) => eo(seg(t, r0, r0 + 0.8)));
+    this.rings.forEach((g, i) => { g.style.opacity = ro[i]; });
+    const count = Math.round(lerp(45, 150, eo(seg(t, 15.7, 16.5))));
+    const pv = eo(seg(t, 5.8, 6.6));
+    this.P.forEach((o, kk) => {
+      const c = this.pul[kk];
+      if (kk >= count) { c.style.opacity = 0; return; }
+      const ph = (t * o.sp + o.off) % 1;
+      const [ea, eb, g] = o.e, A = this.N[ea], B = this.N[eb];
+      c.setAttribute('cx', lerp(A.x, B.x, ph));
+      c.setAttribute('cy', lerp(A.y, B.y, ph));
+      c.style.opacity = pv * ro[g] * Math.sin(ph * Math.PI);
+    });
+    this.tag.opacity = eo(seg(t, 0.2, 0.6));
+    TextFx.fadeFromRight(this.line, t, 9.7);
+    const su = eo(seg(t, 10.5, 11.1));
+    this.sub.opacity = su;
+    this.sub.transform = 'translateX(' + lerp(26, 0, su) + 'px)';
+    let fx = HUBX[0];
+    for (let i = 1; i < 5; i++) fx = lerp(fx, HUBX[i], eio(seg(t, LIT(i - 1) + 0.1, LIT(i))));
+    this.flow.style.strokeDashoffset = 1 - (fx - HUBX[0]) / (HUBX[4] - HUBX[0]);
+    this.flow.style.opacity = eo(seg(t, LIT(0) - 0.2, LIT(0)));
+    this.dot.setAttribute('cx', fx);
+    this.dot.style.opacity = eo(seg(t, LIT(0) - 0.2, LIT(0))) * (1 - eo(seg(t, LIT(4) + 0.3, LIT(4) + 0.6)));
+    this.hubs.forEach((g, i) => {
+      const kb = eob(seg(t, LIT(i) - 0.15, LIT(i) + 0.3), 1.8);
+      g.setAttribute('transform', 'translate(' + HUBX[i] + ' ' + HUBY + ') scale(' + kb + ') translate(' + -HUBX[i] + ' ' + -HUBY + ')');
+      g.style.opacity = seg(t, LIT(i) - 0.15, LIT(i) - 0.05);
+      const l = eo(seg(t, LIT(i) - 0.05, LIT(i) + 0.4));
+      this.labs[i].opacity = l;
+      this.labs[i].transform = 'translateY(' + lerp(18, 0, l) + 'px)';
+    });
+    TextFx.fadeFromRight(this.end, t, 15.9, { stagger: 0.08 });
+    const out8 = 1 - eo(seg(t, 18.0, 18.6));
+    this.words.opacity = out8;
+    this.end.style.opacity = out8;
+    this.hubsvg.opacity = out8;
+    this.labs.forEach((st) => { st.opacity = (+st.opacity) * out8; });
+    const on9 = eo(seg(t, 18.4, 18.9));
+    this.w2.opacity = on9;
+    this.t2.opacity = on9;
+    TextFx.fadeFromRight(this.l2, t, 18.6);
+    const s9 = eo(seg(t, 19.5, 20.1));
+    this.s2.opacity = s9;
+    this.s2.transform = 'translateX(' + lerp(26, 0, s9) + 'px)';
+    const rv = eo(seg(t, 19.4, 20.2));
+    this.RP.forEach((o, kk) => {
+      const c = this.rpul[kk];
+      if (rv <= 0) { c.style.opacity = 0; return; }
+      const ph = (t * o.sp + o.off) % 1;
+      const [ea, eb] = o.e, A = this.N[ea], B = this.N[eb];
+      c.setAttribute('cx', lerp(B.x, A.x, ph));
+      c.setAttribute('cy', lerp(B.y, A.y, ph));
+      c.style.opacity = rv * 0.9 * Math.sin(ph * Math.PI);
+    });
+    this.ledger.opacity = eo(seg(t, 20.0, 20.4));
+    this.ens.forEach((st, i) => {
+      const t0 = 20.3 + i * 0.12;
+      st.opacity = eo(seg(t, t0, t0 + 0.15));
+      st.transform = 'scale(' + eob(seg(t, t0, t0 + 0.35), 1.8) + ')';
+    });
+    for (const [st, t0] of [[this.pa, 21.6], [this.pb, 23.2]]) {
+      const k = seg(t, t0, t0 + 0.7);
+      st.opacity = eo(seg(t, t0, t0 + 0.3));
+      st.transform = 'translateY(' + lerp(40, 0, eob(k, 1.6)) + 'px)';
+    }
+    const PL = 'color-mix(in srgb, var(--accent) 22%, var(--second))';
+    this.words.background = 'color-mix(in srgb, ' + PL + ' ' + (96 * eo(seg(t, 9.4, 9.9))).toFixed(1) + '%, transparent)';
+    this.end.style.background = 'color-mix(in srgb, ' + PL + ' ' + (97 * eo(seg(t, 15.6, 16.0))).toFixed(1) + '%, transparent)';
+  },
+});
+})(mkKit('brain'));
+(function(kit){
+const { seg, eo, eio, eob, lerp, TextFx } = kit;
+const TOOLS = ['Action Analysis', 'Funnel', 'Win/Loss', 'Prioritization', 'Adaptive Model Performance'];
+const ROWS = [['Eligible', 520], ['Pass policies', 250], ['Win arbitration', 205], ['Delivered', 190]];
+kit.scene('insight', {
+  init(kit) {
+    const L = window.LY;
+    const chip = (s) => '<span class="insight-chip" style="display:inline-block;padding:10px 20px;border-radius:999px;font-size:24px;font-weight:700;border:2px solid color-mix(in srgb, var(--ground) 30%, transparent);color:var(--ground)">' + s + '</span>';
+    let rows = '';
+    ROWS.forEach(([n, w], i) => {
+      rows += '<div style="position:absolute;left:992px;top:' + (610 + i * 82) + 'px;display:flex;align-items:center;gap:20px">' +
+        '<p style="margin:0;width:230px;font-size:26px;color:color-mix(in srgb, var(--ground) 88%, var(--accent))">' + n + '</p>' +
+        '<div class="insight-bar" style="height:44px;width:' + w + 'px;border-radius:8px;transform-origin:0 50%;background:' + (i === 1 ? 'var(--main)' : 'color-mix(in srgb, var(--accent) 60%, var(--ground))') + '"></div></div>';
+    });
+    this.root = kit.h('<div class="ground" style="background:var(--second);color:var(--ground)"><div class="insight-all" style="position:absolute;inset:0;transform-origin:960px 540px">' +
+      '<div class="words" style="left:120px;top:100px;width:1680px"><p class="tag insight-tag" style="color:color-mix(in srgb, var(--main) 55%, var(--ground))">Continuous improvement</p>' +
+      '<h2 class="line insight-line">Understanding what happened</h2>' +
+      '<p class="sub insight-sub" style="color:color-mix(in srgb, var(--ground) 80%, var(--second))">Ask in the Studio. Discovery tools in CDH find the answer.</p></div>' +
+      '<div class="insight-pl" style="position:absolute;left:120px;top:360px;width:760px;height:660px;box-sizing:border-box;border-radius:22px;background:color-mix(in srgb, var(--second) 82%, var(--ground));border:2px solid color-mix(in srgb, var(--ground) 22%, var(--second))"></div>' +
+      '<div class="insight-pr" style="position:absolute;left:960px;top:360px;width:840px;height:660px;box-sizing:border-box;border-radius:22px;background:color-mix(in srgb, var(--accent) 28%, var(--second));border:2px solid color-mix(in srgb, var(--accent) 60%, var(--second))"></div>' +
+      '<p class="tag insight-kl" style="position:absolute;margin:0;left:152px;top:388px;color:color-mix(in srgb, var(--main) 55%, var(--ground))">Customer Engagement Studio</p>' +
+      '<p class="tag insight-kr" style="position:absolute;margin:0;left:992px;top:388px;color:color-mix(in srgb, var(--accent) 40%, var(--ground))">Customer Decision Hub \u00b7 Discovery tools</p>' +
+      '<p class="insight-q" style="position:absolute;margin:0;left:152px;top:450px;width:600px;box-sizing:border-box;padding:22px 28px;border-radius:22px 22px 22px 6px;background:color-mix(in srgb, var(--ground) 92%, var(--second));color:var(--second);font-size:30px;line-height:1.3;font-weight:600">Why isn\u2019t my holiday offer winning?</p>' +
+      '<p class="insight-st" style="position:absolute;margin:0;left:152px;top:575px;font-size:24px;color:color-mix(in srgb, var(--main) 50%, var(--ground))">Runtime Analytics is checking<span class="insight-d">.</span><span class="insight-d">.</span><span class="insight-d">.</span></p>' +
+      '<p class="insight-a" style="position:absolute;margin:0;left:232px;top:640px;width:600px;box-sizing:border-box;padding:22px 28px;border-radius:22px 22px 6px 22px;background:color-mix(in srgb, var(--main) 75%, var(--second));color:var(--ground);font-size:30px;line-height:1.3;font-weight:600">Most customers drop out at the policy step.</p>' +
+      '<p class="pill insight-adv" style="left:232px;top:820px;background:var(--second);color:var(--ground)">Advisories: review this offer\u2019s policy</p>' +
+      '<div class="insight-chips" style="position:absolute;left:992px;top:446px;width:776px;display:flex;flex-wrap:wrap;gap:12px">' + TOOLS.map(chip).join('') + '</div>' +
+      rows +
+      '<p class="insight-note" style="position:absolute;margin:0;left:1504px;top:700px;font-size:26px;font-weight:700;color:color-mix(in srgb, var(--main) 50%, var(--ground))">\u2190 Biggest drop</p>' +
+      '<svg class="art" viewBox="0 0 1920 1080"><path class="insight-c1" d="M752 495 H990" pathLength="1" style="fill:none;stroke:var(--main);stroke-width:4;stroke-dasharray:1 1"/><path class="insight-c2" d="M990 715 H832" pathLength="1" style="fill:none;stroke:var(--main);stroke-width:4;stroke-dasharray:1 1"/>' +
+      '<circle class="insight-dot" r="11" style="fill:var(--ground)"/></svg>' +
+      L.paper(99, 'insight-paper', true) + '</div></div>');
+    kit.stage.append(this.root);
+    const q = (s) => this.root.querySelector(s);
+    this.all = q('.insight-all').style;
+    this.tag = q('.insight-tag').style;
+    this.line = q('.insight-line');
+    this.sub = q('.insight-sub').style;
+    this.panels = ['.insight-pl', '.insight-pr', '.insight-kl', '.insight-kr'].map((s) => q(s).style);
+    this.q = q('.insight-q').style;
+    this.st = q('.insight-st').style;
+    this.dots = [...this.root.querySelectorAll('.insight-d')].map((e) => e.style);
+    this.a = q('.insight-a').style;
+    this.adv = q('.insight-adv').style;
+    this.chips = [...this.root.querySelectorAll('.insight-chip')].map((e) => e.style);
+    this.bars = [...this.root.querySelectorAll('.insight-bar')].map((e) => e.style);
+    this.rows = [...this.root.querySelectorAll('.insight-bar')].map((e) => e.parentNode.style);
+    this.note = q('.insight-note').style;
+    this.c1 = q('.insight-c1'); this.c2 = q('.insight-c2');
+    this.dot = q('.insight-dot');
+    this.paper = q('.insight-paper').style;
+    this.root.querySelector('.insight-paper .ly-ok').style.display = 'none';
+  },
+  render(t) {
+    this.all.transform = 'scale(' + lerp(1, 1.015, seg(t, 0, 13)) + ')';
+    this.tag.opacity = eo(seg(t, -0.2, 0.2));
+    TextFx.fadeFromRight(this.line, t, 0.1);
+    const s = eo(seg(t, 0.9, 1.4));
+    this.sub.opacity = s;
+    this.sub.transform = 'translateX(' + lerp(26, 0, s) + 'px)';
+    const pan = eo(seg(t, 0.6, 1.1));
+    this.panels.forEach((st) => { st.opacity = pan; });
+    const pop = (st, t0) => { const k = seg(t, t0, t0 + 0.5); st.opacity = eo(seg(t, t0, t0 + 0.2)); st.transform = 'translateY(' + lerp(24, 0, eob(k, 1.6)) + 'px)'; };
+    pop(this.q, 1.1);
+    this.st.opacity = eo(seg(t, 1.8, 2.1)) * (1 - eo(seg(t, 7.4, 7.8)));
+    this.dots.forEach((d, i) => { d.opacity = 0.3 + 0.7 * Math.max(0, Math.sin(t * 5 - i * 0.9)); });
+    const g1 = eio(seg(t, 1.8, 2.6)), g2 = eio(seg(t, 7.0, 7.6));
+    this.c1.style.strokeDashoffset = 1 - g1;
+    this.c1.style.opacity = 1 - eo(seg(t, 8.0, 8.6));
+    this.c2.style.strokeDashoffset = 1 - g2;
+    this.c2.style.opacity = 1 - eo(seg(t, 8.0, 8.6));
+    let dx, dy, dop;
+    if (t < 4) { dx = lerp(752, 990, g1); dy = 495; dop = seg(t, 1.8, 1.9) * (1 - seg(t, 2.6, 2.8)); }
+    else { dx = lerp(990, 832, g2); dy = 715; dop = seg(t, 7.0, 7.1) * (1 - seg(t, 7.6, 7.8)); }
+    this.dot.setAttribute('cx', dx); this.dot.setAttribute('cy', dy);
+    this.dot.style.opacity = dop;
+    this.chips.forEach((st, i) => {
+      const t0 = 2.8 + i * 0.3, k = eo(seg(t, t0, t0 + 0.3));
+      st.opacity = lerp(0.35, 1, k) * pan;
+      st.background = 'color-mix(in srgb, var(--main) ' + (k * (i === 1 ? 100 : 55)).toFixed(1) + '%, transparent)';
+      st.transform = 'scale(' + (1 + Math.sin(seg(t, t0, t0 + 0.4) * Math.PI) * 0.06) + ')';
+    });
+    this.rows.forEach((st) => { st.opacity = eo(seg(t, 4.9, 5.3)); });
+    this.bars.forEach((st, i) => {
+      const t0 = 5.4 + i * 0.35;
+      st.transform = 'scaleX(' + eio(seg(t, t0, t0 + 0.6)) + ')';
+    });
+    this.note.opacity = eo(seg(t, 6.9, 7.3));
+    this.note.transform = 'translateX(' + lerp(20, 0, eo(seg(t, 6.9, 7.4))) + 'px)';
+    pop(this.a, 7.6);
+    pop(this.adv, 8.8);
+    const pk = eob(seg(t, 10.0, 10.5), 1.7);
+    this.paper.opacity = eo(seg(t, 10.0, 10.15));
+    this.paper.transform = 'translate(' + (760 - 60) + 'px,' + (930 - 75) + 'px) scale(' + (0.62 * pk) + ') rotate(' + Math.sin(t * 1.6) * 3 + 'deg)';
+  },
+});
+
+})(mkKit('insight'));
+(function(kit){
+const { seg, eo, eio, eob, lerp, TextFx } = kit;
+kit.scene('loop', {
+  init(kit) {
+    const L = window.LY;
+    this.root = kit.h('<div class="ground"><div style="position:absolute;inset:0;transform-origin:1370px 520px;transform:scale(1.04)">' + L.building() + '</div>' +
+      '<div class="loop-glow" style="position:absolute;left:944px;top:666px;width:853px;height:250px;box-sizing:border-box;border-radius:17px;border:6px solid var(--accent)"></div>' +
+      '<svg class="art" viewBox="0 0 1920 1080"><path class="loop-path" d="M956 800 H912 V290 H952" pathLength="1" style="fill:none;stroke:var(--main);stroke-width:6;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1 1"/>' +
+      '<path class="loop-head" d="M932 272 L954 290 L932 308" style="fill:none;stroke:var(--main);stroke-width:6;stroke-linecap:round;stroke-linejoin:round"/>' +
+      '<circle class="loop-dot" r="11" style="fill:var(--main)"/></svg>' +
+      L.paper(98, 'loop-paper', true) +
+      '<div class="words" style="left:120px;top:200px;width:720px"><p class="tag loop-tag">Continuous improvement</p>' +
+      '<p class="sub loop-s1">Every insight starts the next change.</p>' +
+      '<h2 class="line loop-line">Decide. Learn. Improve. Every change governed.</h2>' +
+      '<p class="sub loop-s2">The Studio drafts. Ops Manager governs. CDH decides and learns.</p></div></div>');
+    kit.stage.append(this.root);
+    const q = (s) => this.root.querySelector(s);
+    this.glow = q('.loop-glow').style;
+    this.path = q('.loop-path');
+    this.head = q('.loop-head').style;
+    this.dot = q('.loop-dot');
+    this.paper = q('.loop-paper').style;
+    this.ok = this.root.querySelector('.loop-paper .ly-ok').style;
+    this.tag = q('.loop-tag').style;
+    this.s1 = q('.loop-s1').style;
+    this.s2 = q('.loop-s2').style;
+    this.line = q('.loop-line');
+  },
+  render(t) {
+    this.tag.opacity = eo(seg(t, 0.2, 0.6));
+    for (const [st, t0] of [[this.s1, 1.2], [this.s2, 8.0]]) {
+      const k = eo(seg(t, t0, t0 + 0.6));
+      st.opacity = k; st.transform = 'translateX(' + lerp(26, 0, k) + 'px)';
+    }
+    TextFx.fadeFromRight(this.line, t, 6.4, { stagger: 0.12 });
+    const d = eio(seg(t, 0.6, 2.0));
+    this.path.style.strokeDashoffset = 1 - d;
+    this.head.opacity = eo(seg(t, 1.9, 2.1));
+    if (t > 2.0) {
+      const L = this.path.getTotalLength(), ph = ((t - 2.0) / 2.4) % 1;
+      const p = this.path.getPointAtLength(ph * L);
+      this.dot.setAttribute('cx', p.x); this.dot.setAttribute('cy', p.y);
+      this.dot.style.opacity = eo(seg(t, 2.0, 2.3)) * Math.min(1, Math.sin(ph * Math.PI) * 3);
+    } else this.dot.style.opacity = 0;
+    this.glow.opacity = 0.9 * eo(seg(t, 5.6, 6.2));
+    const ap = eob(seg(t, 2.4, 2.9), 1.7);
+    const down1 = eio(seg(t, 3.2, 4.0)), down2 = eio(seg(t, 4.8, 5.6));
+    let y = lerp(200, 462, down1); y = lerp(y, 700, down2);
+    const x = 1620 + Math.sin(down1 * Math.PI) * 30 + Math.sin(down2 * Math.PI) * 30;
+    const sink = eo(seg(t, 5.6, 6.0));
+    this.paper.opacity = eo(seg(t, 2.4, 2.55)) * (1 - sink);
+    this.paper.transform = 'translate(' + (x - 60 + 60) + 'px,' + (y + sink * 30) + 'px) scale(' + (ap * lerp(1, 0.3, sink)) + ')';
+    this.ok.transform = 'scale(' + eob(seg(t, 4.1, 4.45), 1.8) + ')';
+    window.LY.spin(this.root, t + Math.max(0, t - 5.6) * 1.2);
+  },
+});
+
+})(mkKit('loop'));
+
+const SCENES = [{"id": "layers", "dur": 7}, {"id": "agents", "dur": 7}, {"id": "tools", "dur": 8}, {"id": "born", "dur": 8.5}, {"id": "path", "dur": 9}, {"id": "ops", "dur": 11.5}, {"id": "brain", "dur": 30.1}, {"id": "insight", "dur": 13}, {"id": "loop", "dur": 11.5}];
+const CH = [["The three layers", 0, 7, "Three layers, each with one job. The Studio is the new front door, Ops Manager is the governed workplace, and Customer Decision Hub is the engine that makes decisions in production.", [["Customer Engagement Studio", "Where you ask, in plain language."], ["1:1 Operations Manager", "Where every change is governed."], ["Customer Decision Hub", "Where live decisions run in production."]]], ["Helping agents", 7, 14, "Inside the Studio, helping agents each draft one part of the work. You describe what you want; they turn it into drafts ready for review.", [["Marketing Briefs", "Turns a brief into clear intent."], ["Engagement Policy", "Turns plain English into valid policies."], ["Creative", "Designs the treatments."]]], ["Agent tools", 14, 22, "The agents rely on tools that read the application, the performance data and the best-practice guides. External agents can plug in through MCP.", [["Application Exploration", "Reads how the app is set up."], ["Runtime Analytics", "Interaction history and action performance."], ["Guidebooks and Advisories", "Best practices, plus health gaps found for you."], ["External agents", "Connect to the Studio through MCP."]]], ["A change takes shape", 22, 30.5, "Every change follows the same governed case inside the Studio: intake, authoring, approval and publishing. The result is a change request.", [["Intake", "Your request is logged."], ["Author", "Agents draft the change."], ["Approve", "Reviewers sign off."], ["Publish", "It is packaged as a change request."]]], ["No direct line to production", 30.5, 39.5, "The one rule: the Studio has no connection to production. The change request goes to 1:1 Operations Manager, where it is approved and scheduled.", [["No shortcut", "The Studio cannot change production directly."], ["Through Ops Manager", "Every change request lands in Ops Manager first."], ["Approved and scheduled", "There it is approved and scheduled for release."]]], ["Inside 1:1 Operations Manager", 39.5, 51, "Ops Manager handles many change requests at once. Approved ones are grouped into release vehicles that carry them to production on a schedule.", [["Many changes at once", "Our change request joins many other approved ones."], ["Release vehicles", "Approved change requests are bundled into releases."], ["Scheduled delivery", "Release vehicles carry them to production."]]], ["Into Customer Decision Hub", 51, 64.2, "The releases arrive in Customer Decision Hub. Our change request joins hundreds of others, and together they form the brain behind every decision.", [["Arriving in production", "Release vehicles deliver into Customer Decision Hub."], ["Hundreds of changes", "Ours is one of hundreds already live."], ["One brain", "Together they become part of the decision network."]]], ["How a decision is made", 64.2, 73.2, "For every interaction, CDH takes the signal, knows the customer, checks the rules, predicts with adaptive models and picks the next best action. At this scale it is mission-critical, which is why every change goes through a change request.", [["Signal in", "A click, call or visit."], ["Knows them", "Profile and live context."], ["Checks rules", "Eligibility and policies."], ["Predicts", "Adaptive AI models."], ["Decides", "The next best action."]]], ["Every decision leaves a trail", 73.2, 81.1, "Customers respond to every decision, and each response is recorded in interaction history. Adaptive models learn from these responses on their own, while structural changes still go through a change request.", [["Responses flow back", "Accepted, clicked or ignored, every outcome is captured."], ["Interaction history", "A record of every decision and its result."], ["Models learn on their own", "Adaptive models update automatically. No change request needed."], ["Structural changes are governed", "New actions, treatments, rules or strategies need a change request."]]], ["Understanding what happened", 81.1, 94.1, "In the Studio, you ask a plain-language question. Runtime Analytics and the discovery tools in Customer Decision Hub find the answer, and Advisories suggests what to fix.", [["Ask in the Studio", "For example: why isn’t my offer winning?"], ["Discovery tools answer", "Action Analysis, Funnel, Win/Loss, Prioritization and Adaptive Model Performance."], ["Find the drop-off", "The funnel shows where customers fall out."], ["Act on it", "Advisories points to the fix, and a new change begins."]]], ["Closing the loop", 94.1, 105.6, "Every insight becomes the next change request, which travels the same governed path through Ops Manager into Customer Decision Hub. The system keeps getting better, safely.", [["Insight to action", "Learnings feed the next change in the Studio."], ["Same governed path", "Change request, approval, release vehicle, production."], ["Continuous improvement", "Decide. Learn. Improve. Every change governed."]]]];
+let acc = 0;
+SCENES.forEach((s) => { s.start = acc; acc += s.dur; const k = mkKitFor(s.id); REG[s.id].init(k); });
+function mkKitFor(id) { return { seg, lerp, eo, eio, eob, TextFx, stage: BOX[id], h(html) { const tp = document.createElement('template'); tp.innerHTML = html.trim(); return tp.content.firstElementChild; } }; }
+const TOTAL = acc;
+let cur = -1;
+function draw(T) {
+  let i = SCENES.findIndex((s) => T < s.start + s.dur);
+  if (i < 0) i = SCENES.length - 1;
+  const s = SCENES[i];
+  if (i !== cur) { if (cur >= 0) BOX[SCENES[cur].id].classList.remove('on'); BOX[s.id].classList.add('on'); cur = i; }
+  REG[s.id].render(Math.min(T - s.start, s.dur - 0.0001));
+}
+const screen = document.getElementById('screen');
+new ResizeObserver(() => { STAGE.style.transform = 'scale(' + (screen.clientWidth / 1920) + ')'; }).observe(screen);
+STAGE.style.transform = 'scale(' + (screen.clientWidth / 1920) + ')';
+
+const $ = (id) => document.getElementById(id);
+const strip = $('strip'), clist = $('clist');
+const fmt = (s) => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
+CH.forEach((c, i) => {
+  const b = document.createElement('button');
+  b.className = 'seg'; b.style.setProperty('--d', c[2] - c[1]);
+  b.setAttribute('aria-label', 'Chapter ' + (i + 1) + ': ' + c[0]); b.title = c[0];
+  b.innerHTML = '<span class="bar"><span class="fill"></span></span><span class="n"></span>';
+  b.querySelector('.n').textContent = (i + 1) + '  ' + c[0];
+  b.onclick = () => go(i, true);
+  strip.appendChild(b);
+  const li = document.createElement('li');
+  li.innerHTML = '<button><span>' + (i + 1) + '</span><span></span></button>';
+  li.querySelector('span:last-child').textContent = c[0];
+  li.firstChild.onclick = () => go(i, true);
+  clist.appendChild(li);
+});
+const segs = [...strip.children], items = [...clist.querySelectorAll('button')];
+
+let T = 0, playing = true, ch = 0, atEnd = false, last = null;
+function setPanel() {
+  const c = CH[ch];
+  $('count').textContent = 'Chapter ' + (ch + 1) + ' of ' + CH.length;
+  $('ctitle').textContent = c[0];
+  $('csum').textContent = c[3];
+  const dl = $('cpoints'); dl.textContent = '';
+  c[4].forEach(([h, d]) => { const dt = document.createElement('dt'); dt.textContent = h; const dd = document.createElement('dd'); dd.textContent = d; const g = document.createElement('div'); g.append(dt, dd); dl.appendChild(g); });
+  items.forEach((b, i) => b.setAttribute('aria-current', i === ch ? 'true' : 'false'));
+  segs.forEach((b, i) => b.classList.toggle('cur', i === ch));
+  $('prev').disabled = false;
+  try { history.replaceState(null, '', '#ch' + (ch + 1)); } catch (e) {}
+}
+function setUi() {
+  $('playLabel').textContent = playing ? 'Pause' : (atEnd ? 'Watch again' : 'Play');
+  $('playIcon').innerHTML = playing ? '<path d="M5 3 V13 M11 3 V13" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>' : '<path d="M5 3 L13 8 L5 13 Z" fill="currentColor"/>';
+  $('next').disabled = ch === CH.length - 1;
+  const h = $('hint');
+  if (atEnd) { h.textContent = 'That\u2019s the whole walkthrough. Press Play to watch it again, or pick any chapter.'; h.classList.add('ready'); }
+  else { h.textContent = ''; h.classList.remove('ready'); }
+}
+function go(i, play) {
+  ch = Math.max(0, Math.min(CH.length - 1, i));
+  T = CH[ch][1]; atEnd = false; playing = play; last = null;
+  setPanel(); setUi(); paint();
+}
+function paint() {
+  draw(atEnd ? T - 0.001 : T);
+  segs.forEach((b, i) => { const c = CH[i]; b.querySelector('.fill').style.width = (seg(T, c[1], c[2]) * 100) + '%'; });
+  $('time').textContent = fmt(T) + ' / ' + fmt(TOTAL);
+}
+function tick(now) {
+  if (playing) {
+    if (last != null) T += Math.min(0.1, (now - last) / 1000);
+    last = now;
+    while (ch < CH.length - 1 && T >= CH[ch][2]) { ch++; setPanel(); }
+    if (T >= TOTAL) { T = TOTAL; playing = false; atEnd = true; last = null; setUi(); }
+  } else last = null;
+  paint();
+  requestAnimationFrame(tick);
+}
+$('play').onclick = () => {
+  if (atEnd) { go(0, true); return; }
+  playing = !playing; setUi();
+};
+$('replay').onclick = () => go(ch, true);
+$('next').onclick = () => { if (ch < CH.length - 1) go(ch + 1, true); };
+$('prev').onclick = () => { if (T - CH[ch][1] > 1.5 && !atEnd) go(ch, true); else go(ch - 1, true); };
+document.addEventListener('keydown', (e) => {
+  if (e.target.closest && e.target.closest('input, textarea')) return;
+  if (e.code === 'Space') { e.preventDefault(); $('play').click(); }
+  else if (e.key === 'ArrowRight') $('next').click();
+  else if (e.key === 'ArrowLeft') $('prev').click();
+  else if (e.key === 'r' || e.key === 'R') $('replay').click();
+});
+const m = /^#ch(\d)$/.exec(location.hash);
+go(m ? +m[1] - 1 : 0, true);
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>
